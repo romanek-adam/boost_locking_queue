@@ -1,0 +1,16 @@
+import boost ;
+boost.use-project 1.46.1 ;
+
+import testing ;
+
+project
+    : requirements
+      <include>../src/
+      <library>/boost//unit_test_framework
+    :
+    : requirements <use>/boost/
+    ;
+
+test-suite "locking_queue" :
+    [ run tests.cpp ]
+    ;

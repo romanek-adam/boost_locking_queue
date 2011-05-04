@@ -1,0 +1,11 @@
+import boost ;
+boost.use-project 1.46.1 ;
+
+project boost_locking_queue
+    : usage-requirements <include>src/
+    : source-location src/
+    : requirements
+      <use>/boost
+      <library>/boost//date_time
+      <library>/boost//thread
+    ;
