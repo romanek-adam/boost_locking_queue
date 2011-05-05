@@ -1,1 +1,14 @@
-TBD
+Locking Queue
+-------------
+
+Locking Queue is a thread-safe generic queue container based on the standard
+STL std::queue. It uses some of the pieces from Boost package.
+
+The inspiration for writing this container was Python's Queue.Queue class - 
+simple, yet very powerful, especially when it comes to messaging between
+threads.
+
+Authors
+-------
+
+Adam Romanek - (http://github.com/romanek-adam/)
