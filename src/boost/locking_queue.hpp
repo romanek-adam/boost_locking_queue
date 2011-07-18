@@ -66,8 +66,7 @@ public:
      * Constructs new locking queue.
      */
     locking_queue()
-        : container(), mutex(), non_empty(), unfinished_tasks(0),
-          all_tasks_done()
+        : unfinished_tasks(0)
     {}
 
     /**
@@ -78,8 +77,7 @@ public:
      *                  when constructing new locking queue.
      */
     explicit locking_queue(const container_type& other)
-        : container(other), mutex(), non_empty(), unfinished_tasks(container.size()),
-          all_tasks_done()
+        : container(other), unfinished_tasks(container.size())
     {}
 
     /**
@@ -167,7 +165,7 @@ public:
             lock_guard guard(mutex);
             container.push(element);
             unfinished_tasks++;
-        }        
+        }
         non_empty.notify_one();
     }
 
@@ -213,7 +211,7 @@ public:
 private:
     void pop_common(unique_lock& lock, bool block, int timeout) {
         if (block) {
-            while (!container.empty()) {
+            while (container.empty()) {
                 if (timeout > 0) {
                     if (!non_empty.timed_wait(
                                 lock, boost::posix_time::seconds(timeout))) {
