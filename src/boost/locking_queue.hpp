@@ -10,6 +10,7 @@
 #if !defined(BOOST_LOCKING_QUEUE_HPP)
 #define BOOST_LOCKING_QUEUE_HPP
 
+#include <stdexcept>                                       // for std::logic_error
 #include <queue>
 #include <boost/thread/mutex.hpp>                          // for boost::mutex
 #include <boost/thread/condition_variable.hpp>             // for boost::condition_variable
@@ -64,7 +65,10 @@ public:
     /**
      * Constructs new locking queue.
      */
-    locking_queue() : container(), mutex(), non_empty_cond() {}
+    locking_queue()
+        : container(), mutex(), non_empty(), unfinished_tasks(0),
+          all_tasks_done()
+    {}
 
     /**
      * Constructs new locking queue with the copy of the contents of
@@ -74,7 +78,9 @@ public:
      *                  when constructing new locking queue.
      */
     explicit locking_queue(const container_type& other)
-        : container(other), mutex(), non_empty_cond() {}
+        : container(other), mutex(), non_empty(), unfinished_tasks(container.size()),
+          all_tasks_done()
+    {}
 
     /**
      * Checks whether the queue is empty.
@@ -160,8 +166,48 @@ public:
         {
             lock_guard guard(mutex);
             container.push(element);
+            unfinished_tasks++;
         }        
-        non_empty_cond.notify_one();
+        non_empty.notify_one();
+    }
+
+    /**
+     * Reports a previously enqueued task completion.
+     *
+     * Used by consumer threads to indicate task completion.
+     */
+    void task_done() {
+        lock_guard guard(mutex);
+
+        size_type unfinished = unfinished_tasks - 1;
+        if (unfinished < 0) {
+            throw std::logic_error("Task done reported more times than the number of elements in the queue");
+        }
+
+        if (unfinished == 0) {
+            all_tasks_done.notify_all();
+        }
+
+        unfinished_tasks = unfinished;
+    }
+
+    /**
+     * Blocks until all the elements in the queue have been taken from the
+     * queue and processed.
+     *
+     * When an element is pushed onto the queue by means of
+     * locking_queue#push(), an internal counter of unfinished tasks is
+     * incremented. Then when the element gets popped from the queue and
+     * processed one may indicate task completion by means of
+     * locking_queue#task_done().
+     *
+     * When all tasks are done this method unblocks and returns to the caller.
+     */
+    void join() const {
+        unique_lock lock(mutex);
+        while (unfinished_tasks) {
+            all_tasks_done.wait(lock);
+        }
     }
 
 private:
@@ -169,12 +215,12 @@ private:
         if (block) {
             while (!container.empty()) {
                 if (timeout > 0) {
-                    if (!non_empty_cond.timed_wait(
+                    if (!non_empty.timed_wait(
                                 lock, boost::posix_time::seconds(timeout))) {
                         throw queue_empty();
                     }
                 } else {
-                    non_empty_cond.wait(lock);
+                    non_empty.wait(lock);
                 }
             }
         } else {
@@ -198,7 +244,17 @@ protected:
     /**
      * Non empty condition variable.
      */
-    mutable boost::condition_variable non_empty_cond;
+    mutable boost::condition_variable non_empty;
+
+    /**
+     * Unfinished tasks counter.
+     */
+    size_type unfinished_tasks;
+
+    /**
+     * All tasks done condition variable.
+     */
+    mutable boost::condition_variable all_tasks_done;
 };
 
 } // namespace boost
