@@ -179,7 +179,7 @@ public:
     void task_done() {
         lock_guard guard(mutex);
 
-        size_type unfinished = unfinished_tasks - 1;
+        unsigned long unfinished = unfinished_tasks - 1;
         if (unfinished < 0) {
             throw std::logic_error("Task done reported more times than the number of elements in the queue");
         }
@@ -249,7 +249,7 @@ protected:
     /**
      * Unfinished tasks counter.
      */
-    size_type unfinished_tasks;
+    unsigned long unfinished_tasks;
 
     /**
      * All tasks done condition variable.
