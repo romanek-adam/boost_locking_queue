@@ -18,8 +18,7 @@
 namespace boost {
 
 /**
- * Queue-like class with full locking support. Ideal for multi-threaded
- * purposes.
+ * Generic thread-safe queue class template using boost's mutex and condition_variable.
  *
  * @tparam T         type that is to be stored in locking queue
  * @tparam Container container type that will serve as underlying container
@@ -102,6 +101,10 @@ public:
      * If block is true and timeout is a positive integral value then wait for
      * the element to be available in the queue for at most timeout seconds
      * and then throw @a empty exception.
+     *
+     * This method is the preferred way of popping elements from the queue when
+     * the T's assignment operator is guaranteed not to throw any exceptions.
+     * In the other case one should use locking_queue::pop_safe().
      * 
      * @param[in] block if true, then blocks until an element is available
      * @param[in] timeout number of seconds to wait for the element to be
@@ -112,6 +115,57 @@ public:
     value_type pop(bool block = false, int timeout = 0) {
         unique_lock lock(mutex);
 
+        pop_common(lock, block, timeout);
+
+        value_type element(container.front());
+        container.pop();
+
+        return element;
+    }
+
+    /**
+     * Pops an element from the front of the queue and returns it to the
+     * caller in a safe manner.
+     *
+     * If block is true and timeout is a positive integral value then wait for
+     * the element to be available in the queue for at most timeout seconds
+     * and then throw @a empty exception.
+     * 
+     * This method is safer than locking_queue#pop() in the way it returns the
+     * value to the caller as when an exception is thrown in T's assignment
+     * operator the element stays on the queue and is not lost.
+     *
+     * @param[out] element placeholder for the element that is to be taken from
+     *                     the queue
+     * @param[in] block if true then blocks until an element is available
+     * @param[in] timeout number of seconds to wait for the element to be
+     *                    available
+     *
+     * @sa locking_queue#pop()
+     */
+    void pop_safe(value_type& element, bool block = false, int timeout = 0) {
+        unique_lock lock(mutex);
+
+        pop_common(lock, block, timeout);
+
+        element = container.front();
+        container.pop();
+    }
+
+    /**
+     * Pushes a new element to the back of the queue.
+     * @param[in] element element to be pushed to the back of the queue
+     */
+    void push(const value_type& element) {
+        {
+            lock_guard guard(mutex);
+            container.push(element);
+        }        
+        non_empty_cond.notify_one();
+    }
+
+private:
+    void pop_common(unique_lock& lock, bool block, int timeout) {
         if (block) {
             while (!container.empty()) {
                 if (timeout > 0) {
@@ -128,21 +182,6 @@ public:
                 throw queue_empty();
             }
         }
-
-        value_type element(container.front());
-        container.pop();
-
-        return element;
-    }
-
-    /**
-     * Pushes a new element to the back of the queue.
-     * @param[in] element element to be pushed to the back of the queue
-     */
-    void push(const value_type& element) {
-        lock_guard guard(mutex);
-        container.push(element);
-        non_empty_cond.notify_one();
     }
 
 protected:
