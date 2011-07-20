@@ -36,11 +36,6 @@ protected:
      */
     typedef boost::lock_guard<boost::mutex> lock_guard;
 
-    /**
-     * Unique lock type.
-     */
-    typedef boost::unique_lock<boost::mutex> unique_lock;
-
 public:
     /**
      * Empty queue exception type.
@@ -110,7 +105,7 @@ public:
      * @return the first element of the queue
      */
     value_type pop(bool block = false, int timeout = 0) {
-        unique_lock lock(mutex);
+        boost::mutex::scoped_lock lock(mutex);
 
         if (block) {
             while (!container.empty()) {
