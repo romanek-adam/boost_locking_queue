@@ -31,7 +31,7 @@ template<
     typename Container = std::queue<T>
 >
 class locking_queue : boost::noncopyable {
-protected:
+private:
     /**
      * Lock guard type.
      */
@@ -61,7 +61,7 @@ public:
     /**
      * Constructs new locking queue.
      */
-    locking_queue()
+    explicit locking_queue()
         : unfinished_tasks(0)
     {}
 
@@ -224,7 +224,7 @@ private:
         }
     }
 
-protected:
+private:
     /**
      * Underlying container that serves as a storage for the queue elements.
      */
