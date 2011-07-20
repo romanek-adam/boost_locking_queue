@@ -15,6 +15,7 @@
 #include <boost/thread/mutex.hpp>                          // for boost::mutex
 #include <boost/thread/condition_variable.hpp>             // for boost::condition_variable
 #include <boost/date_time/posix_time/posix_time_types.hpp> // for boost::posix_time
+#include <boost/utility.hpp>                               // for boost::noncopyable
 
 namespace boost {
 
@@ -29,7 +30,7 @@ template<
     typename T,
     typename Container = std::queue<T>
 >
-class locking_queue {
+class locking_queue : boost::noncopyable {
 protected:
     /**
      * Lock guard type.
