@@ -47,3 +47,13 @@ BOOST_AUTO_TEST_CASE( pop_non_blocking )
     // ignore timeout parameter if block is false
     BOOST_CHECK_THROW(lq.pop(false, 5), empty);
 }
+
+BOOST_AUTO_TEST_CASE( pop_blocking )
+{
+    locking_queue<int> q;
+
+    int value = 5;
+    q.push(value);
+
+    BOOST_CHECK(q.pop(true) == value);
+}
