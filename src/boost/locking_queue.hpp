@@ -143,7 +143,7 @@ public:
      * @sa locking_queue#pop()
      */
     void pop_safe(value_type& element, bool block = false, int timeout = 0) {
-        unique_lock lock(mutex);
+        boost::mutex::scoped_lock lock(mutex);
 
         pop_common(lock, block, timeout);
 
@@ -197,14 +197,14 @@ public:
      * When all tasks are done this method unblocks and returns to the caller.
      */
     void join() const {
-        unique_lock lock(mutex);
+        boost::mutex::scoped_lock lock(mutex);
         while (unfinished_tasks) {
             all_tasks_done.wait(lock);
         }
     }
 
 private:
-    void pop_common(unique_lock& lock, bool block, int timeout) {
+    void pop_common(boost::mutex::scoped_lock& lock, bool block, int timeout) {
         if (block) {
             while (container.empty()) {
                 if (timeout > 0) {
